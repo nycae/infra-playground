@@ -1,0 +1,3 @@
+api/*.go
+.DS_Store
+

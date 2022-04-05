@@ -1,0 +1,126 @@
+version: "3.7"
+services:
+  frontend:
+    build:
+      context: ../../
+      dockerfile: build/docker/frontend.dockerfile
+    ports: [ "8080:8080" ]
+    environment: &default-env
+      CITY_SERVICE_HOST: 'citier:8082'
+      AGE_SERVICE_HOST: 'ager:8083'
+      HEIGHT_SERVICE_HOST: 'heighter:8084'
+      NAME_SERVICE_HOST: 'namer:8085'
+      JAEGER_HOST: 'jaeger-collector'
+      JAEGER_PORT: 14268
+    depends_on:
+      - citier
+      - ager
+      - heighter
+      - namer
+
+  citier:
+    build:
+      context: ../../
+      dockerfile: build/docker/citier.dockerfile
+    depends_on:
+      - jaeger-collector
+    environment: *default-env
+
+  ager:
+    build:
+      context: ../../
+      dockerfile: build/docker/ager.dockerfile
+    depends_on:
+      - jaeger-collector
+    environment: *default-env
+
+  heighter:
+    build:
+      context: ../../
+      dockerfile: build/docker/heighter.dockerfile
+    depends_on:
+      - jaeger-collector
+    environment: *default-env
+
+  namer:
+    build:
+      context: ../../
+      dockerfile: build/docker/namer.dockerfile
+    depends_on:
+      - jaeger-collector
+    environment: *default-env
+
+  limiter:
+    build:
+      context: ../../
+      dockerfile: build/docker/limiter.dockerfile
+    depends_on:
+      - jaeger-collector
+    environment: *default-env
+
+  jaeger-agent:
+    image: jaegertracing/jaeger-agent
+    restart: on-failure
+    environment:
+      REPORTER_GRPC_HOST_PORT: "jaeger-collector:14250"
+      REPORTER_GRPC_RETRY_MAX: 1000
+    depends_on:
+      - elasticsearch
+
+  jaeger-query:
+    image: jaegertracing/jaeger-query
+    ports: [ "16686:16686" ]
+    restart: on-failure
+    environment:
+      SPAN_STORAGE_TYPE: "elasticsearch"
+      ES_NUM_SHARDS: 1
+      ES_NUM_REPLICAS: 0
+      ES_SERVER_URLS: "http://elasticsearch:9200"
+    depends_on:
+      - elasticsearch
+
+  jaeger-collector:
+    image: jaegertracing/jaeger-collector
+    restart: on-failure
+    environment:
+      SPAN_STORAGE_TYPE: "kafka"
+      KAFKA_PRODUCER_BROKERS: "kafka:9092"
+      KAFKA_TOPIC: "jaeger-traces"
+    depends_on:
+      - kafka
+
+  jaeger-ingester:
+    image: jaegertracing/jaeger-ingester
+    restart: on-failure
+    environment:
+      SPAN_STORAGE_TYPE: elasticsearch
+      ES_SERVER_URLS: 'http://elasticsearch:9200'
+      KAFKA_CONSUMER_BROKERS: 'kafka:9092'
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - 29092:29092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
+    environment:
+      - "xpack.security.enabled=false"
+      - "discovery.type=single-node"
+    ports:
+      - "9200:9200"
