@@ -10,8 +10,8 @@ services:
       AGE_SERVICE_HOST: 'ager:8083'
       HEIGHT_SERVICE_HOST: 'heighter:8084'
       NAME_SERVICE_HOST: 'namer:8085'
-      JAEGER_HOST: 'jaeger-collector'
-      JAEGER_PORT: 14268
+      COLLECTOR_HOST: 'jaeger-collector'
+      COLLECTOR_PORT: 14268
     depends_on:
       - citier
       - ager
@@ -88,7 +88,7 @@ services:
       KAFKA_TOPIC: "jaeger-traces"
     depends_on:
       - kafka
-
+    
   jaeger-ingester:
     image: jaegertracing/jaeger-ingester
     restart: on-failure
@@ -103,6 +103,7 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
 
+  # Kafka and FluentD exists in the final clusters
   kafka:
     image: confluentinc/cp-kafka:latest
     depends_on:

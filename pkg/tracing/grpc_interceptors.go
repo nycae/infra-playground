@@ -1,35 +1,16 @@
 package tracing
 
 import (
-	"fmt"
-
-	"github.com/nycae/infra-playground/pkg/utils"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
 
-type url struct {
-	host, port string
-}
-
-func (u url) String() string {
-	return fmt.Sprintf("http://%s:%s/api/traces", u.host, u.port)
-}
-
-var (
-	defaultURL = url{
-		host: utils.GetEnvWithDefault("JAEGER_HOST", "jaeger"),
-		port: utils.GetEnvWithDefault("JAEGER_PORT", "14268"),
-	}
-)
-
 func clientInterceptors(service string) []grpc.DialOption {
-	j, err := NewJaegerExporter()
+	tracer, err := NewOTLP(service)
 	if err != nil {
 		panic(err)
 	}
 
-	tracer := NewTraceProvider(service, j)
 	options := []grpc.DialOption{
 		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(
 			otelgrpc.WithTracerProvider(tracer),
@@ -43,12 +24,10 @@ func clientInterceptors(service string) []grpc.DialOption {
 }
 
 func serverInterceptors(service string) []grpc.ServerOption {
-	j, err := NewJaegerExporter()
+	tracer, err := NewOTLP(service)
 	if err != nil {
 		panic(err)
 	}
-
-	tracer := NewTraceProvider(service, j)
 
 	options := []grpc.ServerOption{
 		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(

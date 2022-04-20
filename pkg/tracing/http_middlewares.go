@@ -21,13 +21,13 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandlerMiddleware(server, service string, h http.Handler) http.Handler {
-	j, err := NewJaegerExporter()
+	j, err := NewOTLP(service)
 	if err != nil {
 		log.Printf("unable to create tracer: %v", err.Error())
 	}
 
 	return &handler{
 		h: h,
-		t: NewTraceProvider(server, j).Tracer(service),
+		t: j.Tracer(service),
 	}
 }

@@ -8,8 +8,8 @@ import (
 )
 
 func NewJaegerExporter() (trace.SpanExporter, error) {
-	exp, err := jaeger.New(jaeger.WithCollectorEndpoint(
-		jaeger.WithEndpoint(defaultURL.String())))
+	exp, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(
+		fmt.Sprintf("http://%s/api/traces", defaultURL.String()))))
 	if err != nil {
 		return nil, fmt.Errorf("unable to contact jaeger collector: %v", err.Error())
 	}

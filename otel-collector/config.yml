@@ -1,0 +1,25 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+exporters:
+  logging:
+  otlp/data-prepper:
+    endpoint: data-prepper:21890
+    insecure: true
+
+processors:
+  batch:
+
+extensions:
+  health_check:
+
+service:
+  extensions: [ health_check ]
+  pipelines:
+    traces:
+      receivers: [ otlp ]
+      exporters: [ otlp/data-prepper, logging ]
+      processors: [ batch ]
