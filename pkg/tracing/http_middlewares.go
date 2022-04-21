@@ -21,7 +21,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandlerMiddleware(server, service string, h http.Handler) http.Handler {
-	j, err := NewOTLP(service)
+	j, err := NewOTLP(server)
 	if err != nil {
 		log.Printf("unable to create tracer: %v", err.Error())
 	}

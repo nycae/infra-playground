@@ -2,6 +2,7 @@ package tracing
 
 import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/otel/propagation"
 	"google.golang.org/grpc"
 )
 
@@ -12,12 +13,12 @@ func clientInterceptors(service string) []grpc.DialOption {
 	}
 
 	options := []grpc.DialOption{
-		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(
-			otelgrpc.WithTracerProvider(tracer),
-		)),
 		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(
 			otelgrpc.WithTracerProvider(tracer),
-		)),
+			otelgrpc.WithPropagators(propagation.TraceContext{}))),
+		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(
+			otelgrpc.WithTracerProvider(tracer),
+			otelgrpc.WithPropagators(propagation.TraceContext{}))),
 	}
 
 	return options
@@ -32,10 +33,10 @@ func serverInterceptors(service string) []grpc.ServerOption {
 	options := []grpc.ServerOption{
 		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(
 			otelgrpc.WithTracerProvider(tracer),
-		)),
+			otelgrpc.WithPropagators(propagation.TraceContext{}))),
 		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(
 			otelgrpc.WithTracerProvider(tracer),
-		)),
+			otelgrpc.WithPropagators(propagation.TraceContext{}))),
 	}
 
 	return options

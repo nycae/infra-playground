@@ -6,6 +6,13 @@ receivers:
 
 exporters:
   logging:
+  jaeger:
+    endpoint: jaeger-collector:14250
+    insecure: true
+
+  otlp/data-prepper:
+    endpoint: data-prepper:21890
+    insecure: true
 
 processors:
   batch:
@@ -18,5 +25,5 @@ service:
   pipelines:
     traces:
       receivers: [ otlp ]
-      exporters: [ logging ]
+      exporters: [ otlp/data-prepper, logging, jaeger ]
       processors: [ batch ]

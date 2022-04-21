@@ -11,7 +11,7 @@ services:
       HEIGHT_SERVICE_HOST: 'heighter:8084'
       NAME_SERVICE_HOST: 'namer:8085'
       COLLECTOR_HOST: 'jaeger-collector'
-      COLLECTOR_PORT: 14268
+      COLLECTOR_PORT: 14250
     depends_on:
       - citier
       - ager
@@ -108,8 +108,6 @@ services:
     image: confluentinc/cp-kafka:latest
     depends_on:
       - zookeeper
-    ports:
-      - 29092:29092
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -123,5 +121,3 @@ services:
     environment:
       - "xpack.security.enabled=false"
       - "discovery.type=single-node"
-    ports:
-      - "9200:9200"

@@ -1,0 +1,154 @@
+version: "3.7"
+services:
+  frontend:
+    build:
+      context: ../../
+      dockerfile: build/docker/frontend.dockerfile
+    ports: [ "8080:8080" ]
+    environment: &default-env
+      CITY_SERVICE_HOST: 'citier:8082'
+      AGE_SERVICE_HOST: 'ager:8083'
+      HEIGHT_SERVICE_HOST: 'heighter:8084'
+      NAME_SERVICE_HOST: 'namer:8085'
+      COLLECTOR_HOST: 'otel-collector'
+      COLLECTOR_PORT: 4317
+    depends_on:
+      - citier
+      - ager
+      - heighter
+      - namer
+      - otel-collector
+
+  citier:
+    build:
+      context: ../../
+      dockerfile: build/docker/citier.dockerfile
+    depends_on:
+      - otel-collector
+    environment: *default-env
+
+  ager:
+    build:
+      context: ../../
+      dockerfile: build/docker/ager.dockerfile
+    depends_on:
+      - otel-collector
+    environment: *default-env
+
+  heighter:
+    build:
+      context: ../../
+      dockerfile: build/docker/heighter.dockerfile
+    depends_on:
+      - otel-collector
+    environment: *default-env
+
+  namer:
+    build:
+      context: ../../
+      dockerfile: build/docker/namer.dockerfile
+    depends_on:
+      - otel-collector
+    environment: *default-env
+
+  limiter:
+    build:
+      context: ../../
+      dockerfile: build/docker/limiter.dockerfile
+    depends_on:
+      - otel-collector
+    environment: *default-env
+
+  otel-collector:
+    image: otel/opentelemetry-collector
+    restart: on-failure
+    command: [ "--config=/etc/otel-collector-config.yml" ] 
+    volumes: [ ../../otel-collector/config-kafka.yml:/etc/otel-collector-config.yml ]
+    depends_on: 
+      - data-prepper
+      - jaeger-collector
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    restart: always
+    depends_on: [ zookeeper ]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  jaeger-ingester:
+    image: jaegertracing/jaeger-ingester
+    restart: on-failure
+    environment:
+      SPAN_STORAGE_TYPE: elasticsearch
+      ES_SERVER_URLS: 'http://elasticsearch:9200'
+      KAFKA_CONSUMER_BROKERS: 'kafka:9092'
+    depends_on: 
+      - elasticsearch 
+      - kafka
+
+  jaeger-collector:
+    image: jaegertracing/jaeger-collector
+    restart: on-failure
+    environment:
+      SPAN_STORAGE_TYPE: "kafka"
+      KAFKA_PRODUCER_BROKERS: "kafka:9092"
+      KAFKA_TOPIC: "jaeger-traces"
+    depends_on:
+      - kafka
+
+  jaeger-query:
+    image: jaegertracing/jaeger-query
+    ports: [ "16686:16686" ]
+    restart: on-failure
+    depends_on: [ elasticsearch ]
+    environment:
+      SPAN_STORAGE_TYPE: "elasticsearch"
+      ES_NUM_SHARDS: 1
+      ES_NUM_REPLICAS: 0
+      ES_SERVER_URLS: "http://elasticsearch:9200"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
+    environment:
+      - "xpack.security.enabled=false"
+      - "discovery.type=single-node"
+    ports:
+      - "9200:9200"
+
+  data-prepper:
+    image: opensearchproject/data-prepper
+    restart: on-failure
+    depends_on: [ opensearch ]
+    volumes:
+      - ../../data-prepper/pipeline.yml:/usr/share/data-prepper/pipelines.yaml
+
+  opensearch:
+    image: opensearchproject/opensearch:1.3.1
+    restart: on-failure
+    environment:
+      cluster.name: opensearch-cluster
+      discovery.type: single-node
+      discovery.seed_hosts: opensearch
+      node.name: master
+      DISABLE_SECURITY_PLUGIN: 'true'
+      DISABLE_INSTALL_DEMO_CONFIG: 'true'
+ 
+  dashboards:
+    image: opensearchproject/opensearch-dashboards
+    restart: on-failure
+    depends_on: [ opensearch ] 
+    ports: [ 5601:5601 ]
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: 'true'
