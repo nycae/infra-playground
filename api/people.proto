@@ -49,7 +49,12 @@ message HeightReport {
 message HeightLimits {
   int32 height_max = 1;
   int32 height_min = 2;
-}
+};
+
+message ValidationResult {
+  bool   is_valid = 1;
+  string reason   = 2;
+};
 
 service CityManager {
   rpc GetCityAt(Location) returns (City);
@@ -62,6 +67,7 @@ service AgeManager {
 };
 
 service NameManager {
+  rpc Validate(FullName) returns (ValidationResult);
   rpc GetAll(google.protobuf.Empty) returns (stream FullName);
   rpc GetRandom(google.protobuf.Empty) returns (FullName);
 };

@@ -1,6 +1,7 @@
 package tracing
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -30,4 +31,13 @@ func HandlerMiddleware(server, service string, h http.Handler) http.Handler {
 		h: h,
 		t: j.Tracer(service),
 	}
+}
+
+func TracedRequest(ctx context.Context, server, service string,
+	c *http.Client, r *http.Request) (*http.Response, error) {
+	tracer := trace.SpanFromContext(ctx).TracerProvider().Tracer(server)
+	_, span := tracer.Start(ctx, service)
+	defer span.End()
+
+	return c.Do(r)
 }

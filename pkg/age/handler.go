@@ -3,6 +3,8 @@ package age
 import (
 	"context"
 	"fmt"
+	"log"
+	"strings"
 	"sync"
 
 	"github.com/nycae/infra-playground/api"
@@ -13,12 +15,11 @@ type ageCache struct {
 	ages map[string]int32
 }
 
-func (a *ageCache) getAge(key string) (int32, bool) {
+func (a *ageCache) ageOf(key string) (int32, bool) {
 	a.lock.RLock()
 	defer a.lock.RUnlock()
-	res, ok := a.ages[key]
-
-	return res, ok
+	val, ok := a.ages[key]
+	return val, ok
 }
 
 func (a *ageCache) setAge(key string, val int32) {
@@ -37,15 +38,17 @@ type Server struct {
 
 func (s *Server) GetBirthdayOf(ctx context.Context, name *api.FullName) (
 	*api.AgeReport, error) {
-	age, ok := s.cache.getAge(name.FirstName)
+	key := strings.ToLower(name.FirstName)
+	age, ok := s.cache.ageOf(key)
 	if !ok {
-		fetchedAge, err := s.api.AgeOf(name.FirstName)
+		log.Println("cache fail")
+		fetchedAge, err := s.api.AgeOf(ctx, name.FirstName)
 		if err != nil {
 			return nil, fmt.Errorf("unable to fetch the age of user: %v", err.Error())
 		}
 
 		age = fetchedAge
-		s.cache.setAge(name.FamilyName, age)
+		s.cache.setAge(key, age)
 	}
 
 	return &api.AgeReport{Age: age, Birthday: nil}, nil

@@ -5,6 +5,7 @@ services:
       context: ../../
       dockerfile: build/docker/frontend.dockerfile
     ports: [ "8080:8080" ]
+    restart: always
     environment: &default-env
       CITY_SERVICE_HOST: 'citier:8082'
       AGE_SERVICE_HOST: 'ager:8083'
@@ -23,40 +24,40 @@ services:
     build:
       context: ../../
       dockerfile: build/docker/citier.dockerfile
-    depends_on:
-      - otel-collector
+    restart: always
+    depends_on: [ otel-collector ]
     environment: *default-env
 
   ager:
     build:
       context: ../../
       dockerfile: build/docker/ager.dockerfile
-    depends_on:
-      - otel-collector
+    restart: always
+    depends_on: [ otel-collector ]
     environment: *default-env
 
   heighter:
     build:
       context: ../../
       dockerfile: build/docker/heighter.dockerfile
-    depends_on:
-      - otel-collector
+    restart: always
+    depends_on: [ otel-collector ]
     environment: *default-env
 
   namer:
     build:
       context: ../../
       dockerfile: build/docker/namer.dockerfile
-    depends_on:
-      - otel-collector
+    restart: always
+    depends_on: [ otel-collector ]
     environment: *default-env
 
   limiter:
     build:
       context: ../../
       dockerfile: build/docker/limiter.dockerfile
-    depends_on:
-      - otel-collector
+    restart: always
+    depends_on: [ otel-collector ]
     environment: *default-env
 
   otel-collector:
@@ -128,10 +129,10 @@ services:
 
   data-prepper:
     image: opensearchproject/data-prepper
-    restart: on-failure
+    restart: always
     depends_on: [ opensearch ]
     volumes:
-      - ../../data-prepper/pipeline.yml:/usr/share/data-prepper/pipelines.yaml
+      - ../../data-prepper/kafka-pipeline.yml:/usr/share/data-prepper/pipelines.yaml
 
   opensearch:
     image: opensearchproject/opensearch:1.3.1

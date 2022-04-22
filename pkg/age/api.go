@@ -1,10 +1,13 @@
 package age
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+
+	"github.com/nycae/infra-playground/pkg/tracing"
 )
 
 const (
@@ -16,7 +19,7 @@ type API struct {
 	client *http.Client
 }
 
-func (api *API) AgeOf(name string) (int32, error) {
+func (api *API) AgeOf(ctx context.Context, name string) (int32, error) {
 	api.host.Query().Add("name", name)
 	defer func() {
 		for key := range api.host.Query() {
@@ -29,7 +32,8 @@ func (api *API) AgeOf(name string) (int32, error) {
 		return 0, fmt.Errorf("unable to build request: %v", err.Error())
 	}
 
-	resp, err := api.client.Do(req)
+	resp, err := tracing.TracedRequest(ctx, "ager-api-client", "ager-api",
+		api.client, req)
 	if err != nil {
 		return 0, fmt.Errorf("invalid request: %v", err.Error())
 	}
